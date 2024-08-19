@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter with Advanced Features</title>
+    <title>Advanced Space Shooter</title>
     <style>
         body, html {
             margin: 0;
@@ -84,7 +84,7 @@
 
         const shootSound = new Audio('shoot.mp3');
         const explosionSound = new Audio('explosion.mp3');
-        const gameOverSound = new Audio('videogame-death-sound-43894 (2).mp3');
+        const gameOverSound = new Audio('gameover.mp3');
 
         const player = {
             x: canvas.width / 2 - 25,
@@ -96,13 +96,46 @@
         };
 
         let bullets = [];
+        let enemyBullets = [];
         let enemies = [];
         let explosions = [];
+        let stars = [];
         let score = 0;
         let gameActive = true;
         let lastShotTime = 0;
         let firing = false;
         let screenShake = 0;
+
+        // Generate stars for the background
+        function createStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2,
+                    speed: Math.random() * 2 + 0.5
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.fillStyle = '#ffffff';
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function updateStars() {
+            stars.forEach(star => {
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            });
+        }
 
         function drawPlayer() {
             if (playerSprite) {
@@ -116,6 +149,13 @@
         function drawBullets() {
             bullets.forEach(bullet => {
                 ctx.fillStyle = '#ffff00';
+                ctx.fillRect(bullet.x, bullet.y, 5, 15);
+            });
+        }
+
+        function drawEnemyBullets() {
+            enemyBullets.forEach(bullet => {
+                ctx.fillStyle = '#ff0000';
                 ctx.fillRect(bullet.x, bullet.y, 5, 15);
             });
         }
@@ -183,15 +223,27 @@
             }
         }
 
+        function enemyShoot(enemy) {
+            enemyBullets.push({ x: enemy.x + enemy.width / 2 - 2.5, y: enemy.y + enemy.height });
+        }
+
         function updateBullets() {
             bullets = bullets.filter(bullet => bullet.y > 0);
             bullets.forEach(bullet => bullet.y -= 10);
+        }
+
+        function updateEnemyBullets() {
+            enemyBullets = enemyBullets.filter(bullet => bullet.y < canvas.height);
+            enemyBullets.forEach(bullet => bullet.y += 5);
         }
 
         function updateEnemies() {
             enemies = enemies.filter(enemy => enemy.y < canvas.height);
             enemies.forEach(enemy => {
                 enemy.y += 2;
+                if (Math.random() < 0.01) {
+                    enemyShoot(enemy);
+                }
             });
         }
 
@@ -224,103 +276,26 @@
                     enemies.splice(enemyIndex, 1);
                     player.health -= 10;
                     updateHealthBar();
-                    applyScreenShake();
+                    applyScreenShake(20);  // Increased screen shake intensity
                     if (player.health <= 0) {
                         gameOver();
                     }
                 }
             });
-        }
 
-        function updateHealthBar() {
-            const healthBarFill = document.getElementById('healthBarFill');
-            healthBarFill.style.width = `${player.health}%`;
-        }
-
-        function applyScreenShake() {
-            screenShake = 10;
-        }
-
-        function applyShakeEffect() {
-            if (screenShake > 0) {
-                const shakeAmount = screenShake * Math.random() * 2 - screenShake;
-                ctx.translate(shakeAmount, shakeAmount);
-                screenShake--;
-            }
-        }
-
-        function gameOver() {
-            gameActive = false;
-            document.getElementById('gameOver').style.display = 'block';
-            document.getElementById('finalScore').textContent = `Final Score: ${score}`;
-            playGameOverSound();
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.save();
-            applyShakeEffect();
-            if (gameActive) {
-                drawPlayer();
-                drawBullets();
-                drawEnemies();
-                drawExplosions();
-                updateBullets();
-                updateEnemies();
-                checkCollisions();
-            }
-            ctx.restore();
-            requestAnimationFrame(gameLoop);
-        }
-
-        document.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            player.x = e.clientX - rect.left - player.width / 2;
-            player.y = e.clientY - rect.top - player.height / 2;
-        });
-
-        canvas.addEventListener('mousedown', () => {
-            firing = true;
-        });
-
-        canvas.addEventListener('mouseup', () => {
-            firing = false;
-        });
-
-        setInterval(() => {
-            if (gameActive && firing) {
-                shoot();
-            }
-        }, 100);
-
-        document.addEventListener('keydown', (e) => {
-            if (!gameActive && e.key === ' ') {
-                gameActive = true;
-                score = 0;
-                player.health = 100;
-                document.getElementById('scoreValue').textContent = score;
-                document.getElementById('healthBarFill').style.width = '100%';
-                document.getElementById('gameOver').style.display = 'none';
-                bullets = [];
-                enemies = [];
-                explosions = [];
-                gameLoop();
-            }
-        });
-
-        setInterval(() => {
-            if (gameActive) {
-                enemies.push({
-                    x: Math.random() * (canvas.width - 50),
-                    y: 0,
-                    width: 50,
-                    height: 50
-                });
-            }
-        }, 1000);
-
-        gameLoop();
-    </script>
-</body>
-</html>
+            enemyBullets.forEach((bullet, bulletIndex) => {
+                if (
+                    bullet.x < player.x + player.width &&
+                    bullet.x + 5 > player.x &&
+                    bullet.y < player.y + player.height &&
+                    bullet.y + 15 > player.y
+                ) {
+                    enemyBullets.splice(bulletIndex, 1);
+                    player.health -= 10;
+                    updateHealthBar();
+                    applyScreenShake(20);  // Increased screen shake intensity
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+               
 
