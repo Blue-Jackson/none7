@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Space Shooter</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html {
             margin: 0;
@@ -43,22 +42,16 @@
 
         #gameOver {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: #fff;
             font-size: 40px;
             text-align: center;
             display: none;
-        }
-
-        #gameOverContent {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            background-size: cover;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
@@ -69,37 +62,31 @@
         <div id="healthBarFill"></div>
     </div>
     <div id="gameOver">
-        <div id="gameOverContent">
-            Game Over<br>
-            <span id="finalScore"></span><br>
-            Press Space to Restart
-        </div>
+        Game Over<br>
+        <span id="finalScore"></span><br>
+        Press Space to Restart
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        // Load player sprites
+        let playerSpriteIdle = new Image();
+        playerSpriteIdle.src = 'spaceship_idle.png';
+        playerSpriteIdle.onerror = () => { playerSpriteIdle = null; };
 
         let playerSpriteLeft = new Image();
         playerSpriteLeft.src = 'spaceship_left.png';
         playerSpriteLeft.onerror = () => { playerSpriteLeft = null; };
 
-        let playerSpriteIdle = new Image();
-        playerSpriteIdle.src = 'spaceship_idle.png';
-        playerSpriteIdle.onerror = () => { playerSpriteIdle = null; };
-
         let playerSpriteRight = new Image();
         playerSpriteRight.src = 'spaceship_right.png';
         playerSpriteRight.onerror = () => { playerSpriteRight = null; };
 
+        // Load enemy and explosion sprites
         let enemySprite = new Image();
         enemySprite.src = 'enemy.png';
         enemySprite.onerror = () => { enemySprite = null; };
@@ -108,15 +95,15 @@
         explosionSprite.src = 'explosion.png';
         explosionSprite.onerror = () => { explosionSprite = null; };
 
-        let gameOverBackground = new Image();
-        gameOverBackground.src = 'gameover_bg.png';
-        gameOverBackground.onerror = () => { gameOverBackground = null; };
-
+        // Load sounds
         const shootSound = new Audio('shoot.mp3');
         const explosionSound = new Audio('explosion.mp3');
         const gameOverSound = new Audio('gameover.mp3');
+
+        // Load background music
         const backgroundMusic = new Audio('background_music.mp3');
         backgroundMusic.loop = true;
+        backgroundMusic.volume = 0.5;
 
         const player = {
             x: canvas.width / 2 - 25,
@@ -125,10 +112,7 @@
             height: 50,
             speed: 5,
             health: 100,
-            lastX: canvas.width / 2 - 25,
-            isFlickering: false,
-            flickerDuration: 0,
-            flickerInterval: null
+            direction: 'idle'
         };
 
         let bullets = [];
@@ -142,8 +126,8 @@
         let firing = false;
         let screenShake = 0;
 
+        // Generate stars for the background
         function createStars() {
-            stars = [];
             for (let i = 0; i < 200; i++) {
                 stars.push({
                     x: Math.random() * canvas.width,
@@ -174,27 +158,24 @@
         }
 
         function drawPlayer() {
-            if (player.isFlickering && Math.floor(Date.now() / 100) % 2 === 0) {
-                return;
+            let sprite;
+            switch (player.direction) {
+                case 'left':
+                    sprite = playerSpriteLeft;
+                    break;
+                case 'right':
+                    sprite = playerSpriteRight;
+                    break;
+                default:
+                    sprite = playerSpriteIdle;
             }
 
-            let currentSprite;
-            if (player.x < player.lastX) {
-                currentSprite = playerSpriteLeft;
-            } else if (player.x > player.lastX) {
-                currentSprite = playerSpriteRight;
-            } else {
-                currentSprite = playerSpriteIdle;
-            }
-
-            if (currentSprite) {
-                ctx.drawImage(currentSprite, player.x, player.y, player.width, player.height);
+            if (sprite) {
+                ctx.drawImage(sprite, player.x, player.y, player.width, player.height);
             } else {
                 ctx.fillStyle = '#00f';
                 ctx.fillRect(player.x, player.y, player.width, player.height);
             }
-
-            player.lastX = player.x;
         }
 
         function drawBullets() {
@@ -298,19 +279,6 @@
             });
         }
 
-        function startPlayerFlicker() {
-            player.isFlickering = true;
-            player.flickerDuration = 1000; // Flicker for 1 second
-            clearInterval(player.flickerInterval);
-            player.flickerInterval = setInterval(() => {
-                player.flickerDuration -= 100;
-                if (player.flickerDuration <= 0) {
-                    player.isFlickering = false;
-                    clearInterval(player.flickerInterval);
-                }
-            }, 100);
-        }
-
         function checkCollisions() {
             bullets.forEach((bullet, bulletIndex) => {
                 enemies.forEach((enemy, enemyIndex) => {
@@ -340,8 +308,7 @@
                     enemies.splice(enemyIndex, 1);
                     player.health -= 10;
                     updateHealthBar();
-                    applyScreenShake(20);
-                    startPlayerFlicker();
+                    applyScreenShake(20);  // Increased screen shake intensity
                     if (player.health <= 0) {
                         gameOver();
                     }
@@ -358,8 +325,7 @@
                     enemyBullets.splice(bulletIndex, 1);
                     player.health -= 10;
                     updateHealthBar();
-                    applyScreenShake(20);
-                    startPlayerFlicker();
+                    applyScreenShake(20);  // Increased screen shake intensity
                     if (player.health <= 0) {
                         gameOver();
                     }
@@ -378,6 +344,7 @@
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
+            // Starfield animation
             updateStars();
             drawStars();
 
@@ -403,42 +370,31 @@
                 requestAnimationFrame(gameLoop);
             } else {
                 ctx.translate(0, 0);  // Reset translation
+                backgroundMusic.pause(); // Stop background music
             }
         }
 
         function gameOver() {
             gameActive = false;
             playGameOverSound();
-            backgroundMusic.pause();
-            backgroundMusic.currentTime = 0;
-            
-            const gameOverElement = document.getElementById('gameOver');
-            gameOverElement.style.display = 'block';
-            
-            if (gameOverBackground) {
-                gameOverElement.style.backgroundImage = `url(${gameOverBackground.src})`;
-                gameOverElement.style.backgroundSize = 'cover';
-                gameOverElement.style.backgroundPosition = 'center';
-            }
-            
+            document.getElementById('gameOver').style.display = 'block';
             document.getElementById('finalScore').textContent = 'Your Score: ' + score;
+            // Optionally set a background image for the Game Over screen
+            document.getElementById('gameOver').style.backgroundImage = 'url("gameover_background.png")';
         }
 
         document.addEventListener('mousemove', event => {
-            player.x = Math.max(0, Math.min(canvas.width - player.width, event.clientX - player.width / 2));
-            player.y = Math.max(0, Math.min(canvas.height - player.height, event.clientY - player.height / 2));
-        });
-
-        document.addEventListener('mousedown', () => {
-            firing = true;
-        });
-
-        document.addEventListener('mouseup', () => {
-            firing = false;
+            player.x = event.clientX - player.width / 2;
+            player.y = event.clientY - player.height / 2;
+            player.direction = 'idle'; // Default to idle unless moving
         });
 
         document.addEventListener('keydown', event => {
-            if (event.code === 'Space' && !gameActive) {
+            if (event.code === 'ArrowLeft') {
+                player.direction = 'left';
+            } else if (event.code === 'ArrowRight') {
+                player.direction = 'right';
+            } else if (event.code === 'Space' && !gameActive) {
                 gameActive = true;
                 player.health = 100;
                 score = 0;
@@ -449,8 +405,14 @@
                 enemyBullets = [];
                 enemies = [];
                 explosions = [];
-                backgroundMusic.play();
+                backgroundMusic.play(); // Play background music
                 gameLoop();
+            }
+        });
+
+        document.addEventListener('keyup', event => {
+            if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+                player.direction = 'idle';
             }
         });
 
@@ -464,4 +426,15 @@
             if (gameActive) {
                 enemies.push({
                     x: Math.random() * (canvas.width - 50),
-                    y:
+                    y: 0,
+                    width: 50,
+                    height: 50
+                });
+            }
+        }, 1000);
+
+        createStars();
+        gameLoop();
+    </script>
+</body>
+</html>
