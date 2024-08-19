@@ -79,8 +79,14 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
 
         let playerSpriteLeft = new Image();
         playerSpriteLeft.src = 'spaceship_left.png';
@@ -119,7 +125,10 @@
             height: 50,
             speed: 5,
             health: 100,
-            lastX: canvas.width / 2 - 25
+            lastX: canvas.width / 2 - 25,
+            isFlickering: false,
+            flickerDuration: 0,
+            flickerInterval: null
         };
 
         let bullets = [];
@@ -133,8 +142,8 @@
         let firing = false;
         let screenShake = 0;
 
-        // Generate stars for the background
         function createStars() {
+            stars = [];
             for (let i = 0; i < 200; i++) {
                 stars.push({
                     x: Math.random() * canvas.width,
@@ -165,6 +174,10 @@
         }
 
         function drawPlayer() {
+            if (player.isFlickering && Math.floor(Date.now() / 100) % 2 === 0) {
+                return;
+            }
+
             let currentSprite;
             if (player.x < player.lastX) {
                 currentSprite = playerSpriteLeft;
@@ -285,6 +298,19 @@
             });
         }
 
+        function startPlayerFlicker() {
+            player.isFlickering = true;
+            player.flickerDuration = 1000; // Flicker for 1 second
+            clearInterval(player.flickerInterval);
+            player.flickerInterval = setInterval(() => {
+                player.flickerDuration -= 100;
+                if (player.flickerDuration <= 0) {
+                    player.isFlickering = false;
+                    clearInterval(player.flickerInterval);
+                }
+            }, 100);
+        }
+
         function checkCollisions() {
             bullets.forEach((bullet, bulletIndex) => {
                 enemies.forEach((enemy, enemyIndex) => {
@@ -314,7 +340,8 @@
                     enemies.splice(enemyIndex, 1);
                     player.health -= 10;
                     updateHealthBar();
-                    applyScreenShake(20);  // Increased screen shake intensity
+                    applyScreenShake(20);
+                    startPlayerFlicker();
                     if (player.health <= 0) {
                         gameOver();
                     }
@@ -331,7 +358,8 @@
                     enemyBullets.splice(bulletIndex, 1);
                     player.health -= 10;
                     updateHealthBar();
-                    applyScreenShake(20);  // Increased screen shake intensity
+                    applyScreenShake(20);
+                    startPlayerFlicker();
                     if (player.health <= 0) {
                         gameOver();
                     }
@@ -350,7 +378,6 @@
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Starfield animation
             updateStars();
             drawStars();
 
@@ -398,8 +425,8 @@
         }
 
         document.addEventListener('mousemove', event => {
-            player.x = event.clientX - player.width / 2;
-            player.y = event.clientY - player.height / 2;
+            player.x = Math.max(0, Math.min(canvas.width - player.width, event.clientX - player.width / 2));
+            player.y = Math.max(0, Math.min(canvas.height - player.height, event.clientY - player.height / 2));
         });
 
         document.addEventListener('mousedown', () => {
@@ -437,16 +464,4 @@
             if (gameActive) {
                 enemies.push({
                     x: Math.random() * (canvas.width - 50),
-                    y: 0,
-                    width: 50,
-                    height: 50
-                });
-            }
-        }, 1000);
-
-        createStars();
-        backgroundMusic.play();
-        gameLoop();
-    </script>
-</body>
-</html>
+                    y:
