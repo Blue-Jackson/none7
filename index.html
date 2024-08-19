@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter with Explosions and Sounds</title>
+    <title>Space Shooter with Mouse Control</title>
     <style>
         body, html {
             margin: 0;
@@ -22,7 +22,7 @@
             top: 10px;
             left: 10px;
             color: #fff;
-            font-size: 40px;
+            font-size: 20px;
         }
 
         #gameOver {
@@ -31,7 +31,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: #fff;
-            font-size: 180px;
+            font-size: 40px;
             text-align: center;
             display: none;
         }
@@ -53,13 +53,13 @@
         canvas.height = window.innerHeight;
 
         const playerSprite = new Image();
-        playerSprite.src = 'https://media.discordapp.net/attachments/1249904363590254696/1269054707654066288/yct20hubfk061.webp?ex=66c46b8c&is=66c31a0c&hm=add56db4c4428ce2a9b4c522668c095fa560fa05f9755f8614846cdb9f26c431&=&format=webp&width=409&height=409';  // Replace with your spaceship image
+        playerSprite.src = 'spaceship.png';  // Replace with your spaceship image
 
         const enemySprite = new Image();
-        enemySprite.src = 'https://media.discordapp.net/attachments/1249904363590254696/1269446197400043530/8fabf2eb407b715315a49f4c67ac4908.png?ex=66c486a6&is=66c33526&hm=301e02c887d7cee4e6f7c9d525328c6e07814275459d2ab3676cd9cf114de32e&=&format=webp&quality=lossless&width=571&height=571';  // Replace with your enemy image
+        enemySprite.src = 'enemy.png';  // Replace with your enemy image
 
         const explosionSprite = new Image();
-        explosionSprite.src = 'https://media.discordapp.net/attachments/1249904363590254696/1269056684765216769/Explosion.png?ex=66c46d63&is=66c31be3&hm=c17f87df8096699028a7492d30ff374c06f1b48bbaea0db82800e92fd1b4cd40&=&format=webp&quality=lossless&width=409&height=51';  // Replace with your explosion sprite sheet
+        explosionSprite.src = 'explosion.png';  // Replace with your explosion sprite sheet
 
         const shootSound = new Audio('shoot.mp3');  // Replace with your shoot sound
         const explosionSound = new Audio('explosion.mp3');  // Replace with your explosion sound
@@ -211,16 +211,17 @@
             }
         }
 
+        document.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            player.x = e.clientX - rect.left - player.width / 2;
+            player.y = e.clientY - rect.top - player.height / 2;
+        });
+
+        canvas.addEventListener('click', () => {
+            shoot();
+        });
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                player.x -= player.speed;
-            }
-            if (e.key === 'ArrowRight') {
-                player.x += player.speed;
-            }
-            if (e.key === ' ') {
-                shoot();
-            }
             if (!gameActive && e.key === ' ') {
                 gameActive = true;
                 score = 0;
