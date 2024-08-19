@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter with Mouse Control and Fallbacks</title>
+    <title>Space Shooter with Advanced Features</title>
     <style>
         body, html {
             margin: 0;
@@ -25,6 +25,21 @@
             font-size: 20px;
         }
 
+        #healthBar {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            height: 25px;
+            background-color: red;
+        }
+
+        #healthBarFill {
+            height: 100%;
+            width: 100%;
+            background-color: green;
+        }
+
         #gameOver {
             position: absolute;
             top: 50%;
@@ -40,6 +55,9 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="score">Score: <span id="scoreValue">0</span></div>
+    <div id="healthBar">
+        <div id="healthBarFill"></div>
+    </div>
     <div id="gameOver">
         Game Over<br>
         <span id="finalScore"></span><br>
@@ -52,24 +70,21 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Load player sprite with fallback
         let playerSprite = new Image();
-        playerSprite.src = 'spaceship.png';  // Replace with your spaceship image
-        playerSprite.onerror = () => { playerSprite = null; };  // Fallback to a rectangle if the image doesn't load
+        playerSprite.src = 'spaceship.png';
+        playerSprite.onerror = () => { playerSprite = null; };
 
-        // Load enemy sprite with fallback
         let enemySprite = new Image();
-        enemySprite.src = 'enemy.png';  // Replace with your enemy image
-        enemySprite.onerror = () => { enemySprite = null; };  // Fallback to a rectangle if the image doesn't load
+        enemySprite.src = 'enemy.png';
+        enemySprite.onerror = () => { enemySprite = null; };
 
-        // Load explosion sprite with fallback
         let explosionSprite = new Image();
-        explosionSprite.src = 'explosion.png';  // Replace with your explosion sprite sheet
-        explosionSprite.onerror = () => { explosionSprite = null; };  // Fallback to no explosion if image doesn't load
+        explosionSprite.src = 'explosion.png';
+        explosionSprite.onerror = () => { explosionSprite = null; };
 
-        const shootSound = new Audio('shoot.mp3');  // Replace with your shoot sound
-        const explosionSound = new Audio('explosion.mp3');  // Replace with your explosion sound
-        const gameOverSound = new Audio('gameover.mp3');  // Replace with your game over sound
+        const shootSound = new Audio('shoot.mp3');
+        const explosionSound = new Audio('explosion.mp3');
+        const gameOverSound = new Audio('gameover.mp3');
 
         const player = {
             x: canvas.width / 2 - 25,
@@ -86,18 +101,18 @@
         let score = 0;
         let gameActive = true;
         let lastShotTime = 0;
+        let firing = false;
+        let screenShake = 0;
 
-        // Draw player with fallback
         function drawPlayer() {
             if (playerSprite) {
                 ctx.drawImage(playerSprite, player.x, player.y, player.width, player.height);
             } else {
-                ctx.fillStyle = '#00f';  // Fallback to blue rectangle
+                ctx.fillStyle = '#00f';
                 ctx.fillRect(player.x, player.y, player.width, player.height);
             }
         }
 
-        // Draw bullets
         function drawBullets() {
             bullets.forEach(bullet => {
                 ctx.fillStyle = '#ffff00';
@@ -105,33 +120,30 @@
             });
         }
 
-        // Draw enemies with fallback
         function drawEnemies() {
             enemies.forEach(enemy => {
                 if (enemySprite) {
                     ctx.drawImage(enemySprite, enemy.x, enemy.y, enemy.width, enemy.height);
                 } else {
-                    ctx.fillStyle = '#f00';  // Fallback to red rectangle
+                    ctx.fillStyle = '#f00';
                     ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
                 }
             });
         }
 
-        // Create explosion with fallback
         function createExplosion(x, y) {
             if (explosionSprite) {
                 explosions.push({
                     x: x,
                     y: y,
                     frame: 0,
-                    totalFrames: 16,  // Adjust based on explosion sprite sheet
-                    spriteWidth: 64,  // Adjust based on explosion frame width
-                    spriteHeight: 64  // Adjust based on explosion frame height
+                    totalFrames: 16,
+                    spriteWidth: 64,
+                    spriteHeight: 64
                 });
             }
         }
 
-        // Draw explosions with fallback
         function drawExplosions() {
             explosions.forEach((explosion, index) => {
                 if (explosionSprite) {
@@ -142,44 +154,40 @@
                     );
                     explosion.frame++;
                     if (explosion.frame >= explosion.totalFrames) {
-                        explosions.splice(index, 1);  // Remove explosion when animation is done
+                        explosions.splice(index, 1);
                     }
                 }
             });
         }
 
-        // Play shoot sound
         function playShootSound() {
             shootSound.play();
         }
 
-        // Play explosion sound
         function playExplosionSound() {
             explosionSound.play();
         }
 
-        // Play game over sound
         function playGameOverSound() {
             gameOverSound.play();
         }
 
-        // Shoot bullets
         function shoot() {
             const currentTime = Date.now();
-            if (currentTime - lastShotTime > 100) {  // Shoot every 100ms
+            if (currentTime - lastShotTime > 100) {
                 bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y });
+                bullets.push({ x: player.x + player.width / 2 - 20, y: player.y });
+                bullets.push({ x: player.x + player.width / 2 + 15, y: player.y });
                 lastShotTime = currentTime;
                 playShootSound();
             }
         }
 
-        // Update bullets
         function updateBullets() {
             bullets = bullets.filter(bullet => bullet.y > 0);
             bullets.forEach(bullet => bullet.y -= 10);
         }
 
-        // Update enemies
         function updateEnemies() {
             enemies = enemies.filter(enemy => enemy.y < canvas.height);
             enemies.forEach(enemy => {
@@ -187,7 +195,6 @@
             });
         }
 
-        // Check collisions
         function checkCollisions() {
             bullets.forEach((bullet, bulletIndex) => {
                 enemies.forEach((enemy, enemyIndex) => {
@@ -207,14 +214,17 @@
                 });
             });
 
-            enemies.forEach(enemy => {
+            enemies.forEach((enemy, enemyIndex) => {
                 if (
                     player.x < enemy.x + enemy.width &&
                     player.x + player.width > enemy.x &&
                     player.y < enemy.y + enemy.height &&
                     player.y + player.height > enemy.y
                 ) {
+                    enemies.splice(enemyIndex, 1);
                     player.health -= 10;
+                    updateHealthBar();
+                    applyScreenShake();
                     if (player.health <= 0) {
                         gameOver();
                     }
@@ -222,7 +232,23 @@
             });
         }
 
-        // Game over logic
+        function updateHealthBar() {
+            const healthBarFill = document.getElementById('healthBarFill');
+            healthBarFill.style.width = `${player.health}%`;
+        }
+
+        function applyScreenShake() {
+            screenShake = 10;
+        }
+
+        function applyShakeEffect() {
+            if (screenShake > 0) {
+                const shakeAmount = screenShake * Math.random() * 2 - screenShake;
+                ctx.translate(shakeAmount, shakeAmount);
+                screenShake--;
+            }
+        }
+
         function gameOver() {
             gameActive = false;
             document.getElementById('gameOver').style.display = 'block';
@@ -230,9 +256,10 @@
             playGameOverSound();
         }
 
-        // Game loop
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            applyShakeEffect();
             if (gameActive) {
                 drawPlayer();
                 drawBullets();
@@ -241,38 +268,46 @@
                 updateBullets();
                 updateEnemies();
                 checkCollisions();
-                requestAnimationFrame(gameLoop);
             }
+            ctx.restore();
+            requestAnimationFrame(gameLoop);
         }
 
-        // Mouse control for player movement
         document.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
             player.x = e.clientX - rect.left - player.width / 2;
             player.y = e.clientY - rect.top - player.height / 2;
         });
 
-        // Shooting on click
-        canvas.addEventListener('click', () => {
-            shoot();
+        canvas.addEventListener('mousedown', () => {
+            firing = true;
         });
 
-        // Restart game with space key
+        canvas.addEventListener('mouseup', () => {
+            firing = false;
+        });
+
+        setInterval(() => {
+            if (gameActive && firing) {
+                shoot();
+            }
+        }, 100);
+
         document.addEventListener('keydown', (e) => {
             if (!gameActive && e.key === ' ') {
                 gameActive = true;
                 score = 0;
+                player.health = 100;
                 document.getElementById('scoreValue').textContent = score;
+                document.getElementById('healthBarFill').style.width = '100%';
                 document.getElementById('gameOver').style.display = 'none';
                 bullets = [];
                 enemies = [];
                 explosions = [];
-                player.health = 100;
                 gameLoop();
             }
         });
 
-        // Enemy spawning
         setInterval(() => {
             if (gameActive) {
                 enemies.push({
@@ -284,8 +319,8 @@
             }
         }, 1000);
 
-        // Start the game loop
         gameLoop();
     </script>
 </body>
 </html>
+
