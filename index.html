@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Space Shooter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body, html {
             margin: 0;
@@ -42,16 +43,22 @@
 
         #gameOver {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
             color: #fff;
             font-size: 40px;
             text-align: center;
             display: none;
-            background-size: cover;
-            width: 100%;
-            height: 100%;
+        }
+
+        #gameOverContent {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
     </style>
 </head>
@@ -62,9 +69,11 @@
         <div id="healthBarFill"></div>
     </div>
     <div id="gameOver">
-        Game Over<br>
-        <span id="finalScore"></span><br>
-        Press Space to Restart
+        <div id="gameOverContent">
+            Game Over<br>
+            <span id="finalScore"></span><br>
+            Press Space to Restart
+        </div>
     </div>
 
     <script>
@@ -73,37 +82,35 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        // Load player sprites
-        let playerSpriteIdle = new Image();
-        playerSpriteIdle.src = 'spaceship_idle.png';
-        playerSpriteIdle.onerror = () => { playerSpriteIdle = null; };
-
         let playerSpriteLeft = new Image();
         playerSpriteLeft.src = 'spaceship_left.png';
         playerSpriteLeft.onerror = () => { playerSpriteLeft = null; };
+
+        let playerSpriteIdle = new Image();
+        playerSpriteIdle.src = 'spaceship_idle.png';
+        playerSpriteIdle.onerror = () => { playerSpriteIdle = null; };
 
         let playerSpriteRight = new Image();
         playerSpriteRight.src = 'spaceship_right.png';
         playerSpriteRight.onerror = () => { playerSpriteRight = null; };
 
-        // Load enemy and explosion sprites
         let enemySprite = new Image();
-        enemySprite.src = 'https://github.com/Blue-Jackson/none7/blob/569f5d941bc9c8c9b24b9bcebcc9e3bc42bd8d01/8fabf2eb407b715315a49f4c67ac4908.png';
+        enemySprite.src = 'enemy.png';
         enemySprite.onerror = () => { enemySprite = null; };
 
         let explosionSprite = new Image();
         explosionSprite.src = 'explosion.png';
         explosionSprite.onerror = () => { explosionSprite = null; };
 
-        // Load sounds
+        let gameOverBackground = new Image();
+        gameOverBackground.src = 'gameover_bg.png';
+        gameOverBackground.onerror = () => { gameOverBackground = null; };
+
         const shootSound = new Audio('shoot.mp3');
         const explosionSound = new Audio('explosion.mp3');
         const gameOverSound = new Audio('gameover.mp3');
-
-        // Load background music
-        const backgroundMusic = new Audio('https://github.com/Blue-Jackson/none7/blob/b9e018c77c69dc05c0003ee01fac104f91be0871/Space-Oddity-8-Bits_SM6NEoex4ws_00_01_19_00_05_12_part%20(1).mp3');
+        const backgroundMusic = new Audio('background_music.mp3');
         backgroundMusic.loop = true;
-        backgroundMusic.volume = 0.5;
 
         const player = {
             x: canvas.width / 2 - 25,
@@ -112,7 +119,7 @@
             height: 50,
             speed: 5,
             health: 100,
-            direction: 'idle'
+            lastX: canvas.width / 2 - 25
         };
 
         let bullets = [];
@@ -158,24 +165,23 @@
         }
 
         function drawPlayer() {
-            let sprite;
-            switch (player.direction) {
-                case 'left':
-                    sprite = playerSpriteLeft;
-                    break;
-                case 'right':
-                    sprite = playerSpriteRight;
-                    break;
-                default:
-                    sprite = playerSpriteIdle;
+            let currentSprite;
+            if (player.x < player.lastX) {
+                currentSprite = playerSpriteLeft;
+            } else if (player.x > player.lastX) {
+                currentSprite = playerSpriteRight;
+            } else {
+                currentSprite = playerSpriteIdle;
             }
 
-            if (sprite) {
-                ctx.drawImage(sprite, player.x, player.y, player.width, player.height);
+            if (currentSprite) {
+                ctx.drawImage(currentSprite, player.x, player.y, player.width, player.height);
             } else {
                 ctx.fillStyle = '#00f';
                 ctx.fillRect(player.x, player.y, player.width, player.height);
             }
+
+            player.lastX = player.x;
         }
 
         function drawBullets() {
@@ -370,31 +376,42 @@
                 requestAnimationFrame(gameLoop);
             } else {
                 ctx.translate(0, 0);  // Reset translation
-                backgroundMusic.pause(); // Stop background music
             }
         }
 
         function gameOver() {
             gameActive = false;
             playGameOverSound();
-            document.getElementById('gameOver').style.display = 'block';
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+            
+            const gameOverElement = document.getElementById('gameOver');
+            gameOverElement.style.display = 'block';
+            
+            if (gameOverBackground) {
+                gameOverElement.style.backgroundImage = `url(${gameOverBackground.src})`;
+                gameOverElement.style.backgroundSize = 'cover';
+                gameOverElement.style.backgroundPosition = 'center';
+            }
+            
             document.getElementById('finalScore').textContent = 'Your Score: ' + score;
-            // Optionally set a background image for the Game Over screen
-            document.getElementById('gameOver').style.backgroundImage = 'url("gameover_background.png")';
         }
 
         document.addEventListener('mousemove', event => {
             player.x = event.clientX - player.width / 2;
             player.y = event.clientY - player.height / 2;
-            player.direction = 'idle'; // Default to idle unless moving
+        });
+
+        document.addEventListener('mousedown', () => {
+            firing = true;
+        });
+
+        document.addEventListener('mouseup', () => {
+            firing = false;
         });
 
         document.addEventListener('keydown', event => {
-            if (event.code === 'ArrowLeft') {
-                player.direction = 'left';
-            } else if (event.code === 'ArrowRight') {
-                player.direction = 'right';
-            } else if (event.code === 'Space' && !gameActive) {
+            if (event.code === 'Space' && !gameActive) {
                 gameActive = true;
                 player.health = 100;
                 score = 0;
@@ -405,14 +422,8 @@
                 enemyBullets = [];
                 enemies = [];
                 explosions = [];
-                backgroundMusic.play(); // Play background music
+                backgroundMusic.play();
                 gameLoop();
-            }
-        });
-
-        document.addEventListener('keyup', event => {
-            if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
-                player.direction = 'idle';
             }
         });
 
@@ -434,6 +445,7 @@
         }, 1000);
 
         createStars();
+        backgroundMusic.play();
         gameLoop();
     </script>
 </body>
