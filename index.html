@@ -297,5 +297,107 @@
                     if (player.health <= 0) {
                         gameOver();
                     }
-               
+                }
+            });
+        }
+
+        function updateHealthBar() {
+            document.getElementById('healthBarFill').style.width = player.health + '%';
+        }
+
+        function applyScreenShake(amount) {
+            screenShake = amount;
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Starfield animation
+            updateStars();
+            drawStars();
+
+            if (screenShake > 0) {
+                const shakeX = Math.random() * screenShake - screenShake / 2;
+                const shakeY = Math.random() * screenShake - screenShake / 2;
+                ctx.translate(shakeX, shakeY);
+                screenShake -= 1;
+            }
+
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+            drawEnemyBullets();
+            drawExplosions();
+
+            updateBullets();
+            updateEnemyBullets();
+            updateEnemies();
+            checkCollisions();
+
+            if (gameActive) {
+                requestAnimationFrame(gameLoop);
+            } else {
+                ctx.translate(0, 0);  // Reset translation
+            }
+        }
+
+        function gameOver() {
+            gameActive = false;
+            playGameOverSound();
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('finalScore').textContent = 'Your Score: ' + score;
+        }
+
+        document.addEventListener('mousemove', event => {
+            player.x = event.clientX - player.width / 2;
+            player.y = event.clientY - player.height / 2;
+        });
+
+        document.addEventListener('mousedown', () => {
+            firing = true;
+        });
+
+        document.addEventListener('mouseup', () => {
+            firing = false;
+        });
+
+        document.addEventListener('keydown', event => {
+            if (event.code === 'Space' && !gameActive) {
+                gameActive = true;
+                player.health = 100;
+                score = 0;
+                document.getElementById('scoreValue').textContent = score;
+                document.getElementById('healthBarFill').style.width = '100%';
+                document.getElementById('gameOver').style.display = 'none';
+                bullets = [];
+                enemyBullets = [];
+                enemies = [];
+                explosions = [];
+                gameLoop();
+            }
+        });
+
+        setInterval(() => {
+            if (gameActive && firing) {
+                shoot();
+            }
+        }, 100);
+
+        setInterval(() => {
+            if (gameActive) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 50),
+                    y: 0,
+                    width: 50,
+                    height: 50
+                });
+            }
+        }, 1000);
+
+        createStars();
+        gameLoop();
+    </script>
+</body>
+</html>
+
 
